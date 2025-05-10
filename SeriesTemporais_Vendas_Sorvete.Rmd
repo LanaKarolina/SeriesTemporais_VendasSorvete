@@ -1,0 +1,219 @@
+---
+title: "Análise de Séries Temporais - Vendas de Sorvetes"
+author: "Lana Reis"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tsibble)
+library(fable)
+library(feasts)
+library(fabletools)
+library(lubridate)
+library(ggplot2)
+library(scales)
+
+source("~/Scripts R/series_temporais_vendas_sorvete.R")
+```
+
+## 1. Introdução
+
+Pedi ao ChatGPT a criação de um dataset com o seguinte prompt:
+```{r, eval=FALSE}
+"Crie um dataset para análise de séries temporais sobre 5 tipos de sabores de sorvete:
+1. Chocolate
+2. Morango
+3. Creme
+4. Limão
+5. Uva
+As variáveis explicativas serão: Data, Sabor, Local de venda (supermercado, shopping, praia e cidade), Preço, Tamanhos do sorvete (Casquinha, 250 gramas, 500 gramas e 1 kilograma).
+A variável resposta será Vendas, contendo o volume de vendas ao longo de 3 anos entre 2021 e 2024. 
+As datas da variável Data deverá conter dados semanais.
+
+Faça com que os sabores mais vendidos sejam baseados na preferência dos brasileiros."
+```
+
+Resultando em:
+
+```{r, echo=FALSE}
+head(dados_originais)
+```
+
+A análise a seguir foi feita baseada nestes dados: **Vendas semanais de sorvetes entre 2021 e 2023, com foco em sabores, tamanhos, estabelecimentos e padrões temporais.** Pedi para que o ChatGPT colocasse nesse documento os insights que fizemos de forma clara e resumida.
+
+Esta análise consiste desde da Análise Exploratória até a Previsão dos Dados. Pedi para que o ChatGPT colocasse nesse documento os insights que fizemos de forma resumida e clara.
+
+Será notório quando estivermos analisando a **Decomposição da Série** que faltou algo a ser solicitado ao prompt _(será que vocês sabem o que faltou?)_. Farei uma Parte 2 deste mesmo dataset, porém solicitando ao ChatGPT a inclusão do que está faltando e veremos se teremos conclusões diferentes das encontradas com esses dados _(com certeza teremos!)_.
+
+## 2. Análise Exploratória
+
+```{r, echo=FALSE}
+# Gráfico: Vendas totais por sabor
+plot_sabor
+```
+
+**Insight:** Chocolate lidera as vendas, Uva é o sabor menos vendido.
+
+```{r, echo=FALSE}
+# Gráfico: Ticket médio por sabor
+plot_sabor2_1
+```
+
+**Insight:** Uva tem o maior ticket médio, Morango o menor.
+
+```{r, echo=FALSE}
+# Gráfico combinado: Vendas e Ticket Médio
+plot_comb
+```
+
+**Insight:** Chocolate combina alto volume com ticket médio equilibrado. Uva tem alta rentabilidade mas baixa demanda.
+
+```{r, echo=FALSE}
+# Heatmaps: Estabelecimento vs Tamanho
+plot_vendas
+plot_ticket
+```
+
+**Insight:** Casquinhas vendem mais na praia. 1kg gera mais receita. Ticket médio é consistente entre estabelecimentos.
+
+## 3. Análise de Correlação
+
+```{r, echo=FALSE}
+# Gráfico: Dispersão preco_total vs vendas
+plot_dispersao
+```
+
+**Insight:** Relação linear clara, mas com diferentes inclinações por tamanho. 1kg tem maior valor unitário.
+
+```{r, echo=FALSE}
+# Gráfico: Dispersão por tamanho e sabor
+plot_dispersao_facet
+```
+
+**Insight:** Chocolate domina em todos os tamanhos. Uva tem menor volume de vendas.
+
+## 4. Testes de Hipóteses
+
+• Existe diferença entre os tipos de estabelecimento?
+  
+```{r, echo=FALSE}
+summary(aov1)
+```
+
+• Existe diferença entre os sabores?
+
+```{r, echo=FALSE}
+summary(aov2)
+```
+
+**Insight:** Estabelecimentos não diferem significativamente no ticket médio. Sabores são diferentes entre si.
+
+• Quais sabores diferem entre si?
+
+```{r}
+dunnTest(ticket_medio ~ as.factor(sabor), data = dados_teste2, method = "bonferroni")
+```
+
+
+```{r, echo=FALSE}
+# Gráfico: Boxplot com grupos significativos
+plot_box_grupos
+```
+
+**Insight:** O sabor Uva é o que se diferencia com relação aos demais sabores, exceto o sabor Limão.
+
+## 5. Modelagem de Séries Temporais
+
+```{r}
+# Gráfico: Decomposição STL
+autoplot(decomposicao) + labs(title = "Decomposição STL da Série de Vendas Semanais")
+```
+
+**Insight:** A série apresenta tendência clara, sem sazonalidade marcada.
+
+```{r}
+gg_season(dados_ts, vendas_total)
+```
+
+**Insight:** Não existe sazonalidade bem definida em nenhum dos anos.
+
+```{r, echo=FALSE}
+# Gráfico: ACF e PACF
+acf_plot
+pacf_plot
+```
+
+**Insight:** AR(1) e MA(1) foram sugeridos como candidatos. Modelo ARIMA(2,0,0) foi o melhor ajustado.
+
+```{r}
+# Gráfico: Diagnóstico dos resíduos
+gg_tsresiduals(modelo_arima_2)
+```
+
+**Insight:** Resíduos são normais, homocedásticos, não autocorrelacionados.
+
+## 6. Previsões
+
+```{r}
+# Previsão geral
+autoplot(previsao_25s, dados_ts)
+```
+
+**Insight:** A previsão geral é estável, consistente com o padrão da série.
+
+```{r}
+# Previsão por sabor
+autoplot(previsao_por_sabor, dados_sabor)
+```
+
+**Insight:** Chocolate e Morango são mais confiáveis. Uva tem alta incerteza.
+
+```{r}
+# Previsão por tamanho
+autoplot(previsao_por_tamanho, dados_tamanho)
+```
+
+**Insight:** Casquinha lidera em volume, mas 500g é mais previsível.
+
+```{r}
+# Previsão por estabelecimento
+autoplot(previsao_por_estabelecimento, dados_estabelecimento)
+```
+
+**Insight:** Cidade tem o melhor comportamento. Shopping é o mais incerto.
+
+```{r}
+# Previsão por sabor + tamanho
+autoplot(previsao_por_sabor_tam, dados_sabor_tam_ts)
+```
+
+**Insight:** Chocolate Casquinha lidera com estabilidade. Uva tem problemas de previsibilidade em todos os tamanhos.
+
+## 7. Acurácia dos Modelos por Grupo
+
+```{r, echo=FALSE}
+# Tabelas de acurácia por tamanho, estabelecimento e combinação entre sabor e tamanho
+acuracia_por_tamanho
+acuracia_por_estabelecimento
+acuracia_por_sabor_tam
+```
+
+**Insight:** MASE abaixo de 0.75 na maioria dos casos. Combinações com Uva e tamanhos grandes são menos previsíveis.
+
+## 8. Conclusão
+
+- O modelo ARIMA(2,0,0) foi o mais robusto e confiável.
+- Previsões por grupo revelaram padrões de comportamento específico.
+- Produtos com maior previsibilidade (ex: Chocolate Casquinha, 500g) devem ser priorizados.
+- Produtos com alto erro (ex: Uva 250g) merecem reavaliação estratégica ou monitoramento especial.
+
+---
+
+## 9. Considerações finais 
+
+Acredito que vocês devam ter entendido que o que faltou no prompt inicial tenha sido pedir a **garantia da sazonalidade de vendas de sorvete também baseada no comportamento dos brasileiros**. Assim, teríamos o componente sazonal atrelado principalmente ao verão e inverno no país, e provalmente o modelo escolhido teria sido outro.
+
+O chat desse projeto foi bem extenso, então por conta disso não consigo revelar para vocês como a interação com o ChatGPT para essa análise foi muito enriquecedora, tanto observando os aspectos positivos da ferramenta (passagem do conhecimento adaptada para o meu perfil, conversa profunda sobre o tema, insights criados em conjunto, conhecimento amplo sobre a lingugaem R e seus pacotes, etc), assim como os aspectos negativos. _(por exemplo, tive a experiência de ver o **viés de confirmação da IA** através de uma conclusão que havia feito e comentado no chat, porém posteriormente vi que essa conclusão estava equivocada e o ChatGPT ao invés de me corrigir, afirmou o meu erro como se fosse verdade)_. Por isso é sempre importante relembrar de nunca confiar 100% no que as IAs nos entregam, pois assim como nós até elas são passíveis de erros (pelo menos até o momento).
