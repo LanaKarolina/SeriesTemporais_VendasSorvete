@@ -16,7 +16,7 @@ library(lubridate)
 library(ggplot2)
 library(scales)
 
-source("~/Scripts R/series_temporais_vendas_sorvete.R")
+source("~/Scripts R/Meus Projetos/SeriesTemporais_VendasSorvete/series_temporais_vendas_sorvete.R")
 ```
 
 ## 1. Introdução
@@ -42,11 +42,11 @@ Resultando em:
 head(dados_originais)
 ```
 
-A análise a seguir foi feita baseada nestes dados: **Vendas semanais de sorvetes entre 2021 e 2023, com foco em sabores, tamanhos, estabelecimentos e padrões temporais.** Pedi para que o ChatGPT colocasse nesse documento os insights que fizemos de forma clara e resumida.
+A análise a seguir foi feita baseada nestes dados: **Vendas semanais de sorvetes entre 2021 e 2023, com foco em sabores, tamanhos, estabelecimentos e padrões temporais.** 
 
 Esta análise consiste desde da Análise Exploratória até a Previsão dos Dados. Pedi para que o ChatGPT colocasse nesse documento os insights que fizemos de forma resumida e clara.
 
-Será notório quando estivermos analisando a **Decomposição da Série** que faltou algo a ser solicitado ao prompt _(será que vocês sabem o que faltou?)_. Farei uma Parte 2 deste mesmo dataset, porém solicitando ao ChatGPT a inclusão do que está faltando e veremos se teremos conclusões diferentes das encontradas com esses dados _(com certeza teremos!)_.
+Será notório quando estivermos analisando a **Decomposição da Série** que faltou algo a ser solicitado ao prompt _(será que vocês sabem o que faltou?)_. Farei uma Parte 2 deste mesmo dataset, porém solicitando à IA a inclusão do que está faltando e veremos se teremos conclusões diferentes das encontradas com esses dados _(com certeza teremos!)_.
 
 ## 2. Análise Exploratória
 
@@ -187,7 +187,13 @@ autoplot(previsao_por_estabelecimento, dados_estabelecimento)
 
 ```{r}
 # Previsão por sabor + tamanho
-autoplot(previsao_por_sabor_tam, dados_sabor_tam_ts)
+autoplot(previsao_por_sabor_tam, dados_sabor_tam_ts) +
+  labs(
+    title = "Previsão de Vendas Totais por Sabor e Tamanho - 25 Semanas",
+    x = "Data", y = "Vendas Totais"
+  ) +
+  facet_wrap(sabor ~ tamanho) +
+  theme_minimal()
 ```
 
 **Insight:** Chocolate Casquinha lidera com estabilidade. Uva tem problemas de previsibilidade em todos os tamanhos.
